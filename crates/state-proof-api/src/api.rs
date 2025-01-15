@@ -8,6 +8,7 @@ use axum::{
 };
 use publisher::extract_fees;
 use serde::{Deserialize, Serialize};
+use tracing::{error, info};
 
 #[derive(Deserialize)]
 pub struct BlockRangeParams {
@@ -35,6 +36,14 @@ pub async fn verify_blocks(
     State(state): State<Arc<AppState>>,
     Query(params): Query<BlockRangeParams>,
 ) -> impl IntoResponse {
+    // Log request details
+    info!(
+        "Processing block range request: from_block={}, to_block={}, total_blocks={}",
+        params.from_block,
+        params.to_block,
+        params.to_block.saturating_sub(params.from_block) + 1,
+    );
+
     // Use query parameter if provided, otherwise use CLI default
     let skip_proof = params
         .skip_proof_verification
@@ -65,7 +74,7 @@ pub async fn verify_blocks(
                     .unwrap()
             }
             Err(e) => {
-                tracing::error!("Failed to serialize response: {}", e);
+                error!("Failed to serialize response: {}", e);
                 let error_json = serde_json::to_vec(&ErrorResponse {
                     error: format!("Failed to serialize response: {}", e),
                 })
@@ -78,7 +87,7 @@ pub async fn verify_blocks(
             }
         },
         Err(e) => {
-            tracing::error!("Error verifying blocks: {}", e);
+            error!("Error verifying blocks: {}", e);
             let error_json = serde_json::to_vec(&ErrorResponse {
                 error: e.to_string(),
             })

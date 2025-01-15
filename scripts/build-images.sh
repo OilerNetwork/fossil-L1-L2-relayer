@@ -37,6 +37,20 @@ docker buildx build --load -f docker/Dockerfile.relayer -t fossil-relayer:latest
 echo -e "${BLUE}Building client image...${NC}"
 docker buildx build --load -f docker/Dockerfile.client -t fossil-client:latest . $VERBOSE
 
+echo -e "${BLUE}Building state-proof-api image...${NC}"
+docker buildx build -f docker/Dockerfile.api \
+  --build-arg BINARY=state-proof-api \
+  -t fossil-state-proof-api:latest \
+  --load \
+  . $VERBOSE
+
+echo -e "${BLUE}Building fetch-fees-proof image...${NC}"
+docker buildx build -f docker/Dockerfile.api \
+  --build-arg BINARY=fetch-fees-proof \
+  -t fossil-light-client/fetch-fees-proof \
+  --load \
+  .
+
 # Clean up the builder
 echo -e "${BLUE}Cleaning up builder...${NC}"
 docker buildx rm fossil-builder

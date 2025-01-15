@@ -136,6 +136,48 @@ impl DbConnection {
 
         Ok(header)
     }
+
+    pub async fn get_hourly_block_headers_in_range(
+        &self,
+        start_block: u64,
+        end_block: u64,
+    ) -> Result<Vec<BlockHeader>, DbError> {
+        if start_block > end_block {
+            return Err(DbError::InvalidBlockRange {
+                start_block,
+                end_block,
+            });
+        }
+
+        let temp_headers = sqlx::query_as!(
+            TempBlockHeader,
+            r#"
+            WITH hourly_blocks AS (
+                SELECT DISTINCT ON (date_trunc('hour', to_timestamp("timestamp")))
+                    block_hash, number, gas_limit, gas_used, nonce, 
+                    transaction_root, receipts_root, state_root, 
+                    base_fee_per_gas, parent_hash, miner, logs_bloom, 
+                    difficulty, totaldifficulty, sha3_uncles, "timestamp", 
+                    extra_data, mix_hash, withdrawals_root, 
+                    blob_gas_used, excess_blob_gas, parent_beacon_block_root
+                FROM blockheaders
+                WHERE number BETWEEN $1 AND $2
+                ORDER BY date_trunc('hour', to_timestamp("timestamp")), number ASC
+            )
+            SELECT * FROM hourly_blocks
+            ORDER BY number ASC
+            "#,
+            start_block as i64,
+            end_block as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let headers: Vec<BlockHeader> =
+            temp_headers.into_iter().map(temp_to_block_header).collect();
+
+        Ok(headers)
+    }
 }
 
 #[derive(sqlx::FromRow, Debug)]

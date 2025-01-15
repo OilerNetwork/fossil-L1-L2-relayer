@@ -1,0 +1,59 @@
+FROM rust:latest AS builder
+
+ARG BINARY
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure cargo to use git CLI for fetching
+RUN mkdir -p /root/.cargo && \
+    echo '[net]\ngit-fetch-with-cli = true' > /root/.cargo/config.toml
+
+# Copy .env file
+COPY .env .
+
+# Install the RISC Zero toolchain
+RUN curl -L https://risczero.com/install | bash && \
+    /root/.risc0/bin/rzup install || true && \
+    mkdir -p /root/.cargo/bin && \
+    (ln -sf /root/.risc0/bin/cargo-risczero /root/.cargo/bin/cargo-risczero || echo "Symlink creation failed, checking directories..." && ls -la /root/.risc0/bin && ls -la /root/.cargo)
+
+ENV PATH="/root/.risc0/bin:/root/.cargo/bin:$PATH"
+
+# Copy only the necessary files
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+
+# Build the specified binary
+RUN set -a && \
+    . ./.env && \
+    set +a && \
+    echo "DATABASE_URL is: $DATABASE_URL" && \
+    cargo build --release --bin ${BINARY}
+
+# Stage 2: Create a minimal runtime image
+FROM debian:bookworm-slim
+
+ARG BINARY
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/target/release/${BINARY} /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/${BINARY}
+
+CMD ["/usr/local/bin/${BINARY}"] 

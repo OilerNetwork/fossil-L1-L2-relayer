@@ -43,6 +43,32 @@ services:
       - fossil
     command: ["client", "-e", ".env.docker"]
 
+  state-proof-api:
+    image: fossil-state-proof-api:latest
+    env_file:
+      - ${ENV_FILE:-.env.docker}
+    volumes:
+      - ./config:/app/config
+      - ./.env.docker:/app/.env.docker
+    networks:
+      - fossil
+    ports:
+      - "3000:3000"
+    command: ["state-proof-api", "-b", "4", "-e", ".env.docker"]
+
+  fetch-fees-proof:
+    image: fossil-fetch-fees-proof:latest
+    env_file:
+      - ${ENV_FILE:-.env.docker}
+    volumes:
+      - ./config:/app/config
+      - ./.env.docker:/app/.env.docker
+    networks:
+      - fossil
+    depends_on:
+      - state-proof-api
+    command: ["fetch-fees-proof", "-e", ".env.docker"]
+
 networks:
   fossil:
     name: fossil-network

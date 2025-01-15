@@ -1,5 +1,5 @@
 // main.rs
-use eth_rlp_verify::are_blocks_and_chain_valid;
+use eth_rlp_verify::are_blocks_valid;
 use risc0_zkvm::guest::env;
 use guest_mmr::core::GuestMMR;
 use guest_types::BlocksValidityInput;
@@ -9,7 +9,7 @@ fn main() {
     let input: BlocksValidityInput = env::read();
 
     // Verify block headers
-    if !are_blocks_and_chain_valid(&input.headers(), input.chain_id()) {
+    if !are_blocks_valid(&input.headers(), input.chain_id()) {
         env::commit(&false);
     }
     // Initialize MMR with previous state

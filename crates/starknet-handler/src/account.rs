@@ -84,7 +84,7 @@ impl StarknetAccount {
                 "Verifying MMR proof"
             );
 
-            match self.account.execute_v1(vec![call.clone()]).send().await {
+            match self.account.execute_v3(vec![call.clone()]).send().await {
                 Ok(tx) => {
                     info!(
                         tx_hash = ?tx.transaction_hash,

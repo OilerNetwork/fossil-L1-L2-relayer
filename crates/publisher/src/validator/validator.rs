@@ -63,7 +63,7 @@ impl<'a> ValidatorBuilder<'a> {
             e
         })?;
         let headers: Vec<eth_rlp_types::BlockHeader> = db_connection
-            .get_block_headers_by_block_range(start_block, end_block)
+            .get_hourly_block_headers_in_range(start_block, end_block)
             .await
             .map_err(|e| {
                 error!(error = %e, "Failed to fetch block headers");
